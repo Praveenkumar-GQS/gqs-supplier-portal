@@ -52,9 +52,13 @@ body{font-family:Arial,sans-serif;background:#e8e8e8;color:var(--text);font-size
 .fb-grid label{font-size:12px;font-weight:700;}
 .fb-grid input,.fb-grid select{border:1px solid #ccc;border-radius:3px;padding:4px 8px;font-size:12px;font-family:inherit;outline:none;}
 .doc-tbl{width:100%;border-collapse:collapse;font-size:12px;}
-.doc-tbl th{background:#888;color:#fff;padding:5px 10px;text-align:left;font-weight:700;}
-.doc-tbl td{padding:6px 10px;border-bottom:1px solid #eee;vertical-align:middle;}
-.doc-del-btn{background:none;border:none;cursor:pointer;color:#e53935;font-size:16px;font-weight:700;padding:0 4px;}
+.doc-tbl th{background:#888;color:#fff;padding:6px 10px;text-align:left;font-weight:700;font-size:12px;}
+.doc-tbl td{padding:6px 10px;border-bottom:1px solid #eee;vertical-align:middle;font-size:12px;}
+.doc-tbl tr:hover td{background:#f9f9f9;}
+.doc-del-btn{background:none;border:none;cursor:pointer;color:#e53935;font-size:15px;font-weight:700;padding:0 3px;line-height:1;}
+.doc-edit-btn{background:none;border:none;cursor:pointer;padding:0 4px;opacity:.75;vertical-align:middle;}
+.doc-edit-btn:hover{opacity:1;}
+.doc-edit-btn svg{width:14px;height:14px;fill:none;stroke:#b8860b;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
 .add-doc-row{display:flex;align-items:center;gap:8px;padding:8px 14px;flex-wrap:wrap;}
 .doc-sel{border:1px solid #ccc;border-radius:3px;padding:4px 8px;font-size:12px;font-family:inherit;outline:none;min-width:160px;}
 .doc-desc-inp{border:1px solid #ccc;border-radius:3px;padding:4px 8px;font-size:12px;font-family:inherit;outline:none;flex:1;min-width:140px;}
@@ -111,6 +115,8 @@ body{font-family:Arial,sans-serif;background:#e8e8e8;color:var(--text);font-size
 .sbox .semail{font-size:14px;font-weight:700;color:var(--teal);margin-bottom:18px;}
 .btn-done{width:100%;padding:8px;border:none;border-radius:4px;background:var(--teal);color:#fff;font-size:13px;font-weight:700;cursor:pointer;}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
 
@@ -268,7 +274,7 @@ body{font-family:Arial,sans-serif;background:#e8e8e8;color:var(--text);font-size
 
 <!-- DOCUMENTATION -->
 <div class="sec-hdr">Documentation</div>
-<table class="doc-tbl"><thead><tr><th style="width:140px">Type</th><th>Description</th><th style="width:70px">Size</th><th>File</th><th style="width:50px"></th></tr></thead><tbody id="doc-table-body"></tbody></table>
+<table class="doc-tbl"><thead><tr><th style="width:140px">Type</th><th>Description</th><th style="width:60px">Size</th><th>File</th><th style="width:60px"></th></tr></thead><tbody id="doc-table-body"></tbody></table>
 <div style="padding:8px 14px;font-size:12px;font-weight:700;color:var(--teal);border-bottom:1px solid #eee;">Upload Document</div>
 <div class="add-doc-row">
   <select class="doc-sel" id="new-doc-type"><option value="">Please Select</option><option>Flash Report</option><option>Expediting Report</option><option>Visit Report</option><option>Timesheet</option><option>IRC</option><option>NCR</option><option>Receipts</option><option>Punchlist</option></select>
@@ -417,21 +423,68 @@ function handleDrop(e) {
   for (var i=0;i<e.dataTransfer.files.length;i++) { var f=e.dataTransfer.files[i]; addDocRow(type,desc||f.name,f.name,f.size); }
 }
 function fmtSize(b){ if(!b)return'0 KB'; if(b<1024)return b+' B'; if(b<1048576)return Math.round(b/1024)+' KB'; return(b/1048576).toFixed(1)+' MB'; }
-function addDocRow(type,desc,fname,size) {
+function addDocRow(type, desc, fname, size) {
   docIdCtr++;
-  var id = "dr" + docIdCtr;
-  var tr = document.createElement("tr");
+  var id = 'dr' + docIdCtr;
+  var tr = document.createElement('tr');
   tr.id = id;
-  var td1 = document.createElement("td"); td1.style.fontWeight="700"; td1.textContent = type||"";
-  var td2 = document.createElement("td"); td2.textContent = desc||"";
-  var td3 = document.createElement("td"); td3.style.color="#888"; td3.style.fontSize="11px"; td3.textContent = fmtSize(size);
-  var td4 = document.createElement("td"); td4.style.color="#007b7f"; td4.style.fontSize="12px"; td4.textContent = fname||"";
-  var td5 = document.createElement("td"); td5.style.textAlign="center";
-  var btn = document.createElement("button"); btn.className="doc-del-btn"; btn.innerHTML="&#215;";
-  btn.onclick = function(){ this.closest("tr").remove(); };
-  td5.appendChild(btn);
-  tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); tr.appendChild(td4); tr.appendChild(td5);
-  document.getElementById("doc-table-body").appendChild(tr);
+
+  var sizeStr = fmtSize(size);
+  var fileDisplay = fname || '';
+
+  // Type cell
+  var td1 = document.createElement('td');
+  td1.style.fontWeight = '700';
+  td1.style.color = '#333';
+  td1.textContent = type || '';
+
+  // Description cell
+  var td2 = document.createElement('td');
+  td2.style.color = '#555';
+  td2.textContent = desc || '';
+
+  // Size cell
+  var td3 = document.createElement('td');
+  td3.className = 'file-size';
+  td3.textContent = sizeStr;
+
+  // File cell
+  var td4 = document.createElement('td');
+  td4.className = 'file-name';
+  td4.textContent = fileDisplay;
+
+  // Actions cell (pencil + red X) matching screenshot
+  var td5 = document.createElement('td');
+  td5.style.textAlign = 'right';
+  td5.style.whiteSpace = 'nowrap';
+
+  // Pencil/edit icon (teal arrow like screenshot)
+  var editBtn = document.createElement('button');
+  editBtn.className = 'doc-edit-btn';
+  editBtn.title = 'Edit';
+  editBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>';
+  editBtn.onclick = function() {
+    var newDesc = prompt('Edit description:', td2.textContent);
+    if (newDesc !== null) td2.textContent = newDesc;
+  };
+
+  // Delete icon (red X)
+  var delBtn = document.createElement('button');
+  delBtn.className = 'doc-del-btn';
+  delBtn.title = 'Remove';
+  delBtn.innerHTML = '&#215;';
+  delBtn.onclick = function() { tr.remove(); };
+
+  td5.appendChild(editBtn);
+  td5.appendChild(delBtn);
+
+  tr.appendChild(td1);
+  tr.appendChild(td2);
+  tr.appendChild(td3);
+  tr.appendChild(td4);
+  tr.appendChild(td5);
+
+  document.getElementById('doc-table-body').appendChild(tr);
 }
 
 var GITHUB_SUPPLIER_URL = '';
@@ -918,8 +971,65 @@ function approveSubmission() {
   sub.approvedAt = new Date().toLocaleString();
   try { localStorage.setItem(key, JSON.stringify(sub)); } catch(e){}
   closeModal('review-modal');
-  showToast('Timesheet approved by ' + (sub.coordinatorName||'coordinator') + '!');
+
+  // Generate PDF and add to documentation table
+  try {
+    var pdf = generateTimesheetPDF(sub, sub.signatureData, sub.coordinatorName, sub.coordinatorDate);
+    var pdfName = 'Timesheet_' + (sub.ref||'GQS').replace(/[\/]/g,'-') + '_' + (sub.coordinatorDate||'') + '.pdf';
+    var pdfBlob = pdf.output('blob');
+    var pdfUrl  = URL.createObjectURL(pdfBlob);
+
+    // Add to documentation table
+    addTimesheetToDocTable(pdfName, pdfUrl, sub, pdfBlob);
+
+    // Also add supplier uploaded docs to doc table
+    (sub.docs||[]).forEach(function(d){
+      if (d.type && d.file && d.file !== 'No file chosen') {
+        addSupplierDocToTable(d.type, d.desc, d.file);
+      }
+    });
+
+    showToast('Approved! Timesheet PDF saved to Documentation.');
+  } catch(e) {
+    showToast('Timesheet approved by ' + (sub.coordinatorName||'coordinator') + '!');
+  }
   checkSubmissions();
+}
+
+function makeDocTr(type, desc, sizeStr, fileCell, isDownload) {
+  var tr = document.createElement('tr');
+  var td1 = document.createElement('td'); td1.style.fontWeight='700'; td1.textContent = type||'';
+  var td2 = document.createElement('td'); td2.style.color='#555'; td2.textContent = desc||'';
+  var td3 = document.createElement('td'); td3.className='file-size'; td3.textContent = sizeStr||'0 KB';
+  var td4 = document.createElement('td'); td4.className='file-name';
+  if (typeof fileCell === 'string') { td4.textContent = fileCell; }
+  else { td4.appendChild(fileCell); }
+  var td5 = document.createElement('td'); td5.style.textAlign='right'; td5.style.whiteSpace='nowrap';
+  var editBtn = document.createElement('button'); editBtn.className='doc-edit-btn'; editBtn.title='Edit';
+  editBtn.innerHTML='<svg viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>';
+  editBtn.onclick = function(){ var v=prompt('Edit description:',td2.textContent); if(v!==null) td2.textContent=v; };
+  var delBtn = document.createElement('button'); delBtn.className='doc-del-btn'; delBtn.innerHTML='&#215;';
+  delBtn.onclick = function(){ tr.remove(); };
+  td5.appendChild(editBtn); td5.appendChild(delBtn);
+  tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); tr.appendChild(td4); tr.appendChild(td5);
+  return tr;
+}
+
+function addTimesheetToDocTable(name, url, sub, blob) {
+  var size = blob ? Math.round(blob.size/1024) + ' KB' : '';
+  var a = document.createElement('a');
+  a.href = url; a.download = name;
+  a.style.cssText = 'color:#007b7f;text-decoration:none;font-weight:700;';
+  a.textContent = name + ' ↓ Download';
+  var tr = makeDocTr('Timesheet', (sub.ref||'') + ' — Approved by ' + (sub.coordinatorName||''), size, a, true);
+  var tbody = document.getElementById('doc-table-body');
+  if (tbody) tbody.insertBefore(tr, tbody.firstChild);
+}
+
+function addSupplierDocToTable(type, desc, fname) {
+  var tr = makeDocTr(type, desc, '0 KB', fname);
+  var tbody = document.getElementById('doc-table-body');
+  if (tbody) tbody.appendChild(tr);
 }
 
 // Listen for postMessage from supplier form
@@ -967,6 +1077,229 @@ function clearOldSubmission() {
 document.addEventListener('keydown', function(e){
   if (e.ctrlKey && e.shiftKey && e.key === 'R') { checkSubmissions(); }
 });
+
+// ── GENERATE TIMESHEET PDF (matching GQS format) ──
+function generateTimesheetPDF(sub, sigData, coordName, coordDate) {
+  var jsPDF = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
+  var doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  var W = doc.internal.pageSize.getWidth();
+  var teal = [0, 123, 127];
+  var tealLight = [224, 244, 244];
+  var yellow = [255, 253, 232];
+  var white = [255,255,255];
+  var black = [0,0,0];
+
+  var y = 8;
+
+  // ── HEADER ──
+  doc.setFillColor(255,255,255);
+  doc.rect(0, 0, W, 22, 'F');
+  // Logo text
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(22);
+  doc.setTextColor(0,123,127);
+  doc.text('GQS', 12, 16);
+  // Title
+  doc.setFontSize(16);
+  doc.setTextColor(0,123,127);
+  doc.text('TIME & EXPENSE REPORT', W - 12, 14, {align:'right'});
+  // Teal underline
+  doc.setFillColor(teal[0],teal[1],teal[2]);
+  doc.rect(0, 20, W, 0.8, 'F');
+
+  y = 26;
+
+  // ── SECTION 1.0 CONTACT DETAILS ──
+  doc.setFillColor(teal[0],teal[1],teal[2]);
+  doc.rect(0, y, W, 6, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(9);
+  doc.setFont('helvetica','bold');
+  doc.text('Section 1.0 Contact Details', W/2, y+4, {align:'center'});
+  y += 6;
+
+  function infoRow(label1, val1, label2, val2, yy) {
+    doc.setFillColor(tealLight[0],tealLight[1],tealLight[2]);
+    doc.rect(0, yy, 45, 5.5, 'F');
+    doc.setTextColor(0,95,99); doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
+    doc.text(label1, 2, yy+3.8);
+    doc.setFillColor(255,255,255); doc.rect(45, yy, 95, 5.5, 'F');
+    doc.setTextColor(black[0],black[1],black[2]); doc.setFont('helvetica','normal');
+    doc.text(val1||'', 47, yy+3.8);
+    if (label2) {
+      doc.setFillColor(tealLight[0],tealLight[1],tealLight[2]);
+      doc.rect(140, yy, 45, 5.5, 'F');
+      doc.setTextColor(0,95,99); doc.setFont('helvetica','bold');
+      doc.text(label2, 142, yy+3.8);
+      doc.setFillColor(255,255,255); doc.rect(185, yy, W-185, 5.5, 'F');
+      doc.setTextColor(black[0],black[1],black[2]); doc.setFont('helvetica','normal');
+      doc.text(val2||'', 187, yy+3.8);
+    }
+    // border
+    doc.setDrawColor(178,216,216); doc.setLineWidth(0.2);
+    doc.rect(0, yy, W, 5.5);
+  }
+
+  infoRow('Client', sub.client, 'Inspector', sub.inspector, y); y+=5.5;
+  infoRow('Client Contact', sub.clientContact, 'Global Contact', sub.globalContact, y); y+=5.5;
+  infoRow('Contract PO Number', sub.contractPO, '', '', y); y+=5.5;
+  y+=2;
+
+  // ── SECTION 2.0 JOB DETAILS ──
+  doc.setFillColor(teal[0],teal[1],teal[2]);
+  doc.rect(0, y, W, 6, 'F');
+  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+  doc.text('Section 2.0 Job Details', W/2, y+4, {align:'center'});
+  y+=6;
+
+  // GQS Number (left big cell) + right details
+  var gqsStartY = y;
+  doc.setFillColor(tealLight[0],tealLight[1],tealLight[2]);
+  doc.rect(0, y, 45, 5.5*5, 'F');
+  doc.setTextColor(0,95,99); doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
+  doc.text('GQS Number', 2, y+9);
+  doc.setFillColor(255,255,255); doc.rect(45, y, 95, 5.5*5, 'F');
+  doc.setTextColor(black[0],black[1],black[2]); doc.setFont('helvetica','normal');
+  doc.text(sub.ref||sub.poNumber||'', 47, y+9);
+
+  var rightFields = [
+    ['PO Number', sub.poNumber], ['WBS Number', sub.wbs],
+    ['Cost Code', sub.costCode], ['NOI Number', sub.noi], ['QS Plan ID', sub.qsPlan]
+  ];
+  rightFields.forEach(function(f, i){
+    doc.setFillColor(tealLight[0],tealLight[1],tealLight[2]);
+    doc.rect(140, y+i*5.5, 45, 5.5, 'F');
+    doc.setTextColor(0,95,99); doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
+    doc.text(f[0], 142, y+i*5.5+3.8);
+    doc.setFillColor(255,255,255); doc.rect(185, y+i*5.5, W-185, 5.5, 'F');
+    doc.setTextColor(black[0],black[1],black[2]); doc.setFont('helvetica','normal');
+    doc.text(f[1]||'', 187, y+i*5.5+3.8);
+    doc.setDrawColor(178,216,216); doc.setLineWidth(0.2);
+    doc.rect(140, y+i*5.5, W-140, 5.5);
+  });
+  y += 5.5*5;
+  infoRow('Vendor Name', sub.vendor, 'CTR Number', sub.ctr, y); y+=5.5;
+
+  // Week start row
+  doc.setFillColor(tealLight[0],tealLight[1],tealLight[2]);
+  doc.rect(0, y, 140, 5.5, 'F');
+  doc.setTextColor(0,95,99); doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
+  doc.text('Enter Date of 1st Saturday of Working Week Claimed', 70, y+3.8, {align:'center'});
+  doc.setFillColor(255,255,255); doc.rect(140, y, W-140, 5.5, 'F');
+  doc.setTextColor(black[0],black[1],black[2]); doc.setFont('helvetica','normal');
+  doc.text(sub.weekStart||'', 142, y+3.8);
+  doc.setDrawColor(178,216,216); doc.setLineWidth(0.2);
+  doc.rect(0, y, W, 5.5);
+  y+=5.5; y+=2;
+
+  // ── SECTION 3.0 VISIT EXPENSES ──
+  doc.setFillColor(teal[0],teal[1],teal[2]);
+  doc.rect(0, y, W, 6, 'F');
+  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+  doc.text('Section 3.0 Visit Expenses', W/2, y+4, {align:'center'});
+  y+=6;
+
+  // Expense table
+  var rows = (sub.rows||[]).map(function(r){
+    return [r.day||'', r.date||'', r.work||'', r.travel||'', r.report||'', r.ot||'', r.mile||'', r.accom||'', r.flight||'', r.pd||'', r.desc||'', r.cost||''];
+  });
+
+  doc.autoTable({
+    startY: y,
+    head: [
+      [{content:'Work Period', colSpan:3, styles:{halign:'center',fillColor:teal,textColor:white,fontStyle:'bold'}},
+       {content:'', colSpan:4, styles:{fillColor:teal,textColor:white}},
+       {content:'Chargeable Costs', colSpan:5, styles:{halign:'center',fillColor:teal,textColor:white,fontStyle:'bold'}}],
+      ['Day','Date','Work
+Time','Travel
+Time','Report
+Time','Over
+Time','Mileage','Accom
+Cost','Flight
+Cost','Per Diem','Description','Cost']
+    ],
+    body: rows,
+    foot: [[
+      {content:'Totals', colSpan:2, styles:{halign:'center',fillColor:teal,textColor:white,fontStyle:'bold'}},
+      sub.totals&&sub.totals.wtr||'', '', '', '', sub.totals&&sub.totals.mile||'',
+      '$ -','$ -','$ -','',sub.totals&&sub.totals.total||'$ -'
+    ]],
+    styles:{fontSize:7, cellPadding:1.5, lineColor:[178,216,216], lineWidth:0.2},
+    headStyles:{fillColor:teal, textColor:white, fontStyle:'bold', fontSize:7, halign:'center'},
+    bodyStyles:{fillColor:yellow, textColor:black},
+    footStyles:{fillColor:teal, textColor:white, fontStyle:'bold'},
+    alternateRowStyles:{fillColor:yellow},
+    columnStyles:{
+      0:{cellWidth:20, fillColor:tealLight, textColor:[0,95,99], fontStyle:'bold'},
+      1:{cellWidth:22, fillColor:tealLight},
+      2:{cellWidth:14, halign:'center'}, 3:{cellWidth:14, halign:'center'},
+      4:{cellWidth:14, halign:'center'}, 5:{cellWidth:14, halign:'center'},
+      6:{cellWidth:16, halign:'center'}, 7:{cellWidth:20, halign:'center'},
+      8:{cellWidth:20, halign:'center'}, 9:{cellWidth:18, halign:'center'},
+      10:{cellWidth:'auto'}, 11:{cellWidth:18, halign:'center'}
+    },
+    margin:{left:0, right:0}
+  });
+
+  y = doc.lastAutoTable.finalY + 3;
+
+  // Totals footer
+  doc.setFillColor(teal[0],teal[1],teal[2]);
+  doc.rect(0, y, W, 5.5, 'F');
+  doc.setTextColor(white[0],white[1],white[2]); doc.setFont('helvetica','bold'); doc.setFontSize(7);
+  doc.text('Total Work & Report Time', 2, y+3.8);
+  doc.text('Hours', 55, y+3.8);
+  doc.text(sub.totals&&sub.totals.wtr||'0.00', 75, y+3.8);
+  doc.text('Expenses Must be Submitted with Receipts', W/2+10, y+3.8, {align:'center'});
+  doc.text('Total Costs $  ' + (sub.totals&&sub.totals.total||'-'), W-5, y+3.8, {align:'right'});
+  y+=5.5;
+
+  doc.setFillColor(teal[0],teal[1],teal[2]);
+  doc.rect(0, y, W, 5.5, 'F');
+  doc.text('Total Over Time', 2, y+3.8);
+  doc.text('Hours', 55, y+3.8);
+  doc.text(sub.totals&&sub.totals.ot||'0.00', 75, y+3.8);
+  y+=5.5;
+
+  doc.setFillColor(teal[0],teal[1],teal[2]);
+  doc.rect(0, y, W, 5.5, 'F');
+  doc.text('Total Mileage', 2, y+3.8);
+  doc.text('Kms', 55, y+3.8);
+  doc.text(sub.totals&&sub.totals.mile||'0', 75, y+3.8);
+  y+=5.5; y+=2;
+
+  // ── SECTION 4.0 CLIENT APPROVAL ──
+  doc.setFillColor(teal[0],teal[1],teal[2]);
+  doc.rect(0, y, W, 6, 'F');
+  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+  doc.text('Section 4.0 Client Approval', W/2, y+4, {align:'center'});
+  y+=6;
+
+  // Approval box
+  doc.setFillColor(255,255,255); doc.rect(0, y, W, 22, 'F');
+  doc.setDrawColor(178,216,216); doc.setLineWidth(0.3);
+  doc.rect(0, y, W, 22);
+
+  doc.setTextColor(0,95,99); doc.setFont('helvetica','bold'); doc.setFontSize(8);
+  doc.text('Approved By: ' + (coordName||''), 5, y+7);
+  doc.text('Date: ' + (coordDate||''), 5, y+14);
+
+  // Signature image
+  if (sigData && sigData.length > 100 && sigData !== 'data:,') {
+    try { doc.addImage(sigData, 'PNG', W/2, y+1, 80, 18); } catch(e){}
+  }
+  doc.setTextColor(black[0],black[1],black[2]); doc.setFont('helvetica','normal'); doc.setFontSize(7);
+  doc.text('Print Name', W-50, y+10);
+  doc.setDrawColor(150,150,150); doc.line(W-70, y+10, W-5, y+10);
+
+  y+=22;
+
+  // Footer
+  doc.setFontSize(6.5); doc.setTextColor(150,150,150); doc.setFont('helvetica','normal');
+  doc.text('IMS004-DOC005 Time & Expense Report, Revision 3, 09/05/2024', W/2, y+4, {align:'center'});
+
+  return doc;
+}
 
 function showToast(msg) {
   var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
