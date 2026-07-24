@@ -577,6 +577,8 @@ function openReviewModal(sub, key) {
   document.getElementById('review-modal').classList.add('open');
   document.getElementById('approve-submission-btn').dataset.key = key || 'demo_key';
   document.getElementById('approve-submission-btn').dataset.sub = JSON.stringify(sub);
+  // Init signature canvas after render
+  setTimeout(initSig, 100);
 }
 
 function renderReviewMode(sub) {
@@ -665,7 +667,30 @@ function renderReviewMode(sub) {
       : '<div style="padding:12px 16px;color:#aaa;font-size:13px;">No documents attached</div>') +
 
     // Notes
-    (sub.notes ? '<div style="padding:12px 16px;background:#fff8e1;border-top:1px solid #ffe082;font-size:13px;"><strong>Coordinator Notes:</strong> ' + sub.notes + '</div>' : '');
+    (sub.notes ? '<div style="padding:12px 16px;background:#fff8e1;border-top:1px solid #ffe082;font-size:13px;"><strong>Coordinator Notes:</strong> ' + sub.notes + '</div>' : '') +
+
+    // Coordinator approval (view mode)
+    '<div style="background:#e0f4f4;padding:6px 16px;font-size:11px;font-weight:700;color:#005f63;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #b2d8d8;">Coordinator Approval</div>' +
+    '<div style="padding:14px 16px;display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;">' +
+      '<div style="flex:1;min-width:180px;">' +
+        '<label style="display:block;font-size:11px;font-weight:700;color:#007b7f;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;">Coordinator Name <span style=\"color:#e53935\">*</span></label>' +
+        '<input id="rv-coord-name" type="text" value="' + (sub.coordinatorName||'') + '" placeholder="Enter full name" style="width:100%;border:1.5px solid #ccc;border-radius:4px;padding:7px 10px;font-size:13px;font-family:inherit;outline:none;">' +
+      '</div>' +
+      '<div style="flex:1;min-width:140px;">' +
+        '<label style="display:block;font-size:11px;font-weight:700;color:#007b7f;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;">Date</label>' +
+        '<input id="rv-coord-date" type="date" value="' + new Date().toISOString().split('T')[0] + '" style="width:100%;border:1.5px solid #ccc;border-radius:4px;padding:7px 10px;font-size:13px;font-family:inherit;outline:none;">' +
+      '</div>' +
+      '<div style="flex:2;min-width:220px;">' +
+        '<label style="display:block;font-size:11px;font-weight:700;color:#007b7f;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;">Signature <span style=\"font-size:10px;font-weight:400;color:#888;\">(draw below)</span></label>' +
+        (sub.signatureData && sub.signatureData !== 'data:,' ?
+          '<img src="' + sub.signatureData + '" style="border:1.5px solid #ccc;border-radius:4px;height:80px;display:block;background:#fff;">' :
+          '<div style="border:1.5px solid #ccc;border-radius:4px;background:#fff;position:relative;">' +
+            '<canvas id="sig-canvas" width="400" height="80" style="width:100%;height:80px;cursor:crosshair;display:block;border-radius:4px;"></canvas>' +
+            '<button onclick="clearSig()" style="position:absolute;top:4px;right:6px;border:none;background:none;font-size:11px;color:#e53935;cursor:pointer;font-family:inherit;font-weight:700;">Clear</button>' +
+          '</div>'
+        ) +
+      '</div>' +
+    '</div>';
 }
 
 function renderEditMode(sub) {
@@ -751,10 +776,49 @@ function renderEditMode(sub) {
 
     // Notes
     '<div style="background:#fff8e1;padding:6px 16px;font-size:11px;font-weight:700;color:#c17a00;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #ffe082;">&#9998; Coordinator Notes</div>' +
-    '<div style="padding:12px 16px;">' +
+    '<div style="padding:12px 16px;border-bottom:1px solid #eee;">' +
       '<textarea id="rv-notes" rows="3" placeholder="Add coordinator notes..." style="width:100%;border:1px solid #ccc;border-radius:4px;padding:8px;font-size:13px;font-family:inherit;outline:none;resize:vertical;">' + (sub.notes||'') + '</textarea>' +
+    '</div>' +
+
+    // Coordinator signature block
+    '<div style="background:#fff8e1;padding:6px 16px;font-size:11px;font-weight:700;color:#c17a00;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #ffe082;">&#9998; Coordinator Approval</div>' +
+    '<div style="padding:14px 16px;display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;">' +
+      '<div style="flex:1;min-width:180px;">' +
+        '<label style="display:block;font-size:11px;font-weight:700;color:#007b7f;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;">Coordinator Name <span style=\"color:#e53935\">*</span></label>' +
+        '<input id="rv-coord-name" type="text" value="' + (sub.coordinatorName||'') + '" placeholder="Enter full name" style="width:100%;border:1.5px solid #ccc;border-radius:4px;padding:7px 10px;font-size:13px;font-family:inherit;outline:none;">' +
+      '</div>' +
+      '<div style="flex:1;min-width:140px;">' +
+        '<label style="display:block;font-size:11px;font-weight:700;color:#007b7f;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;">Date</label>' +
+        '<input id="rv-coord-date" type="date" value="' + new Date().toISOString().split('T')[0] + '" style="width:100%;border:1.5px solid #ccc;border-radius:4px;padding:7px 10px;font-size:13px;font-family:inherit;outline:none;">' +
+      '</div>' +
+      '<div style="flex:2;min-width:220px;">' +
+        '<label style="display:block;font-size:11px;font-weight:700;color:#007b7f;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;">Signature <span style=\"font-size:10px;font-weight:400;color:#888;\">(draw below)</span></label>' +
+        '<div style="border:1.5px solid #ccc;border-radius:4px;background:#fff;position:relative;">' +
+          '<canvas id="sig-canvas" width="400" height="80" style="width:100%;height:80px;cursor:crosshair;display:block;border-radius:4px;"></canvas>' +
+          '<button onclick="clearSig()" style="position:absolute;top:4px;right:6px;border:none;background:none;font-size:11px;color:#e53935;cursor:pointer;font-family:inherit;font-weight:700;">Clear</button>' +
+        '</div>' +
+      '</div>' +
     '</div>';
 }
+
+// Signature canvas logic
+var sigDrawing = false;
+function initSig() {
+  var c = document.getElementById('sig-canvas');
+  if (!c) return;
+  var ctx = c.getContext('2d');
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  c.onmousedown = function(e){ sigDrawing=true; ctx.beginPath(); ctx.moveTo(getX(c,e), getY(c,e)); };
+  c.onmousemove = function(e){ if(!sigDrawing) return; ctx.lineTo(getX(c,e), getY(c,e)); ctx.stroke(); };
+  c.onmouseup = c.onmouseleave = function(){ sigDrawing=false; };
+  c.ontouchstart = function(e){ e.preventDefault(); sigDrawing=true; ctx.beginPath(); ctx.moveTo(getX(c,e.touches[0]), getY(c,e.touches[0])); };
+  c.ontouchmove = function(e){ e.preventDefault(); if(!sigDrawing) return; ctx.lineTo(getX(c,e.touches[0]), getY(c,e.touches[0])); ctx.stroke(); };
+  c.ontouchend = function(){ sigDrawing=false; };
+}
+function getX(c,e){ return (e.clientX - c.getBoundingClientRect().left) * (c.width / c.offsetWidth); }
+function getY(c,e){ return (e.clientY - c.getBoundingClientRect().top) * (c.height / c.offsetHeight); }
+function clearSig(){ var c=document.getElementById('sig-canvas'); if(c){ c.getContext('2d').clearRect(0,0,c.width,c.height); } }
+function getSigData(){ var c=document.getElementById('sig-canvas'); return c ? c.toDataURL() : ''; }
 
 function roField(label, val) {
   return '<div style="font-size:13px;"><strong style="color:#555;">' + label + ':</strong> ' + (val||'<span style="color:#aaa;">—</span>') + '</div>';
@@ -793,9 +857,12 @@ function saveEdit() {
   });
   // Collect notes
   var n=document.getElementById('rv-notes'); if(n) sub.notes=n.value;
+  var cn=document.getElementById('rv-coord-name'); if(cn) sub.coordinatorName=cn.value;
+  var cd=document.getElementById('rv-coord-date'); if(cd) sub.coordinatorDate=cd.value;
   window._reviewSub = sub;
   document.getElementById('approve-submission-btn').dataset.sub = JSON.stringify(sub);
   renderReviewMode(sub);
+  setTimeout(initSig, 100);
   showToast('Changes saved.');
 }
 
@@ -834,15 +901,24 @@ function approveSubmission() {
     });
   }
 
-  // Collect notes
+  // Collect notes + coordinator info
   var notesEl = document.getElementById('rv-notes');
   if(notesEl) sub.notes = notesEl.value;
+  var cnEl = document.getElementById('rv-coord-name');
+  if(cnEl) {
+    if (!cnEl.value.trim()) { alert('Please enter Coordinator Name before approving.'); return; }
+    sub.coordinatorName = cnEl.value.trim();
+  }
+  var cdEl = document.getElementById('rv-coord-date');
+  if(cdEl) sub.coordinatorDate = cdEl.value;
+  // Save signature
+  sub.signatureData = getSigData();
 
   sub.status = 'approved';
   sub.approvedAt = new Date().toLocaleString();
   try { localStorage.setItem(key, JSON.stringify(sub)); } catch(e){}
   closeModal('review-modal');
-  showToast('Timesheet approved successfully!');
+  showToast('Timesheet approved by ' + (sub.coordinatorName||'coordinator') + '!');
   checkSubmissions();
 }
 
