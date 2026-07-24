@@ -1023,13 +1023,7 @@ function generateTimesheetPDF(sub, sigData, coordName, coordDate) {
       [{content:'Work Period', colSpan:3, styles:{halign:'center',fillColor:teal,textColor:white,fontStyle:'bold'}},
        {content:'', colSpan:4, styles:{fillColor:teal,textColor:white}},
        {content:'Chargeable Costs', colSpan:5, styles:{halign:'center',fillColor:teal,textColor:white,fontStyle:'bold'}}],
-      ['Day','Date','Work
-Time','Travel
-Time','Report
-Time','Over
-Time','Mileage','Accom
-Cost','Flight
-Cost','Per Diem','Description','Cost']
+      ['Day','Date','Work Time','Travel Time','Report Time','Over Time','Mileage','Accom Cost','Flight Cost','Per Diem','Description','Cost']
     ],
     body: rows,
     foot: [[
