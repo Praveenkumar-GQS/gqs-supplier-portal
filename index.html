@@ -872,10 +872,20 @@ window.addEventListener('storage', function(e) {
 document.addEventListener('DOMContentLoaded', function(){
   var gqsEl = document.getElementById('gqs-number');
   if (gqsEl) gqsEl.addEventListener('input', checkSubmissions);
+  // Clear any old approved/submitted state for fresh testing
+  clearOldSubmission();
   // Show default GQS ref in banner on load
   updateRef(document.getElementById('gqs-number').value);
   checkSubmissions();
 });
+
+function clearOldSubmission() {
+  // Remove old test submissions so button always starts fresh
+  var ref = (document.getElementById('gqs-number').value || '').trim();
+  var key = ref ? 'gqs_submission_' + ref : null;
+  if (key) localStorage.removeItem(key);
+  localStorage.removeItem('gqs_latest_submission_key');
+}
 
 // Manual check button for testing - press Ctrl+Shift+R to force check
 document.addEventListener('keydown', function(e){
