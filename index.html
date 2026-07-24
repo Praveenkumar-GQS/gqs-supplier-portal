@@ -16,8 +16,7 @@ body{font-family:Arial,sans-serif;background:#e8e8e8;color:var(--text);font-size
 .req-bar-info strong{color:var(--teal-dk);}
 .btn-request{display:inline-flex;align-items:center;gap:6px;padding:7px 15px;border:none;border-radius:3px;background:var(--teal);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
 .btn-request:hover{background:var(--teal-dk);}
-.btn-review{display:inline-flex;align-items:center;gap:6px;padding:7px 15px;border:none;border-radius:3px;background:#f0a500;color:#1a1a1a;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
-.btn-review:hover{background:#d99200;}
+
 .rpt-heading{padding:10px 20px 4px;border-bottom:1px solid var(--border);}
 .rpt-ref{font-size:16px;font-weight:700;}
 .rpt-status{color:var(--teal);font-weight:400;}
@@ -125,11 +124,11 @@ body{font-family:Arial,sans-serif;background:#e8e8e8;color:var(--text);font-size
     <button class="mhdr-close" onclick="closeModal('req-modal')">&#215;</button>
   </div>
   <div class="mbody">
-    <div class="ref-banner" id="modal-ref-banner">
-      <span>GQS Reference</span>
-      <strong id="modal-ref-text">&mdash;</strong>
+    <div style="background:#007b7f;color:#fff;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-radius:4px;margin-bottom:12px;">
+      <span style="font-size:12px;opacity:.8;">GQS Reference</span>
+      <strong id="modal-ref-text" style="font-size:14px;">&mdash;</strong>
     </div>
-    <p class="mdesc" style="margin-top:12px;">Enter the inspector/supplier email. They will receive a link to submit their timesheet.</p>
+    <p class="mdesc">Enter the inspector/supplier email. They will receive a link to complete and submit their timesheet report.</p>
     <div class="mfield">
       <label>Inspector / Supplier Email <span style="color:#e53935">*</span></label>
       <input type="email" id="req-email" placeholder="e.g. inspector@supplier.com">
@@ -137,22 +136,16 @@ body{font-family:Arial,sans-serif;background:#e8e8e8;color:var(--text);font-size
     </div>
     <div class="mfield">
       <label>Message (optional)</label>
-      <textarea id="req-msg" rows="2" placeholder="Add a note..."></textarea>
+      <textarea id="req-msg" rows="2" placeholder="Add a note to include in the email..."></textarea>
     </div>
-    <div class="link-box">
-      <div class="link-box-title">Supplier Form Link</div>
-      <textarea id="link-textarea" readonly onclick="this.select()" placeholder="Click Generate Link first..."></textarea>
-      <div class="link-box-btns">
-        <button class="btn-generate" onclick="generateLink()">Generate Link</button>
-        <button class="btn-copy" id="btn-copy" onclick="copyLink()">Copy Link</button>
-        <button class="btn-open" onclick="openLink()">Open Link</button>
-      </div>
-      <div class="link-box-hint">1. Generate Link &rarr; 2. Copy Link &rarr; 3. Paste in new browser tab</div>
+    <div style="background:#f4f9f9;border:1px solid #b2d8d8;border-radius:5px;padding:10px 12px;">
+      <div style="font-size:11px;color:#555;margin-bottom:6px;">The inspector/supplier will be sent to this page to fill in their timesheet:</div>
+      <div style="font-size:12px;font-weight:700;color:#007b7f;word-break:break-all;" id="supplier-url-display"></div>
     </div>
   </div>
   <div class="mfooter">
     <button class="btn-mcancel" onclick="closeModal('req-modal')">Cancel</button>
-    <button class="btn-msend" onclick="sendRequest()">Send link</button>
+    <button class="btn-msend" onclick="sendRequest()">&#128279; Send &amp; Open Supplier Form</button>
   </div>
 </div>
 </div>
@@ -186,7 +179,6 @@ body{font-family:Arial,sans-serif;background:#e8e8e8;color:var(--text);font-size
 <div class="req-bar">
   <div class="req-bar-info">Report &nbsp;|&nbsp; <strong id="gqs-ref-display">GQS Reference: &mdash;</strong></div>
   <button class="btn-request" id="main-action-btn" onclick="mainActionClick()">&#9993; Request Timesheet Report</button>
-  <button class="btn-review" onclick="openReviewModal(getDemoSubmission(), 'demo_key')">&#128203; Review Timesheet</button>
 </div>
 
 <!-- REPORT HEADING -->
@@ -442,15 +434,28 @@ function addDocRow(type,desc,fname,size) {
   document.getElementById("doc-table-body").appendChild(tr);
 }
 
+var GITHUB_SUPPLIER_URL = '';
+
+function getSupplierURL() {
+  var ref = (document.getElementById('gqs-number').value || '').trim();
+  var base = window.location.origin + window.location.pathname.replace(/index\.html$/, '').replace(/\/$/, '');
+  var url = base + '/supplier.html';
+  if (ref) url += '?ref=' + encodeURIComponent(ref);
+  return url;
+}
+
 function openRequestModal() {
-  var ref = getRef();
-  document.getElementById('modal-ref-text').textContent = ref || '—';
-  document.getElementById('req-email').value = '';
-  document.getElementById('req-email').classList.remove('err');
-  document.getElementById('email-err').textContent = '';
-  document.getElementById('req-msg').value = '';
-  document.getElementById('link-textarea').value = '';
-  blobUrl = '';
+  var ref = (document.getElementById('gqs-number').value || '').trim();
+  var el = document.getElementById('modal-ref-text');
+  if (el) el.textContent = ref || '—';
+  var ei = document.getElementById('req-email');
+  if (ei) { ei.value = ''; ei.classList.remove('err'); }
+  var ee = document.getElementById('email-err');
+  if (ee) ee.textContent = '';
+  var em = document.getElementById('req-msg');
+  if (em) em.value = '';
+  var ud = document.getElementById('supplier-url-display');
+  if (ud) ud.textContent = getSupplierURL();
   document.getElementById('req-modal').classList.add('open');
 }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
@@ -466,9 +471,13 @@ function sendRequest() {
     document.getElementById('req-email').focus();
     return;
   }
+  var url = getSupplierURL();
+  // Open supplier form in new tab
+  window.open(url, '_blank');
   closeModal('req-modal');
   document.getElementById('sent-to').textContent = email;
   document.getElementById('success-modal').classList.add('open');
+  showToast('Supplier form opened in new tab.');
 }
 
 // ── DEMO SUBMISSION DATA (uses current coordinator form values) ──
@@ -512,7 +521,6 @@ function getDemoSubmission() {
 // ── CHECK FOR SUBMISSIONS & SWITCH BUTTON ──
 function checkSubmissions() {
   var ref = (document.getElementById('gqs-number').value || '').trim();
-  // Check by ref first, then by latest key
   var key = null;
   if (ref && localStorage.getItem('gqs_submission_' + ref)) {
     key = 'gqs_submission_' + ref;
@@ -521,29 +529,30 @@ function checkSubmissions() {
   }
   var btn = document.getElementById('main-action-btn');
   if (!btn) return;
-  var sub = key ? localStorage.getItem(key) : null;
-  if (sub) {
-    sub = JSON.parse(sub);
+  var raw = key ? localStorage.getItem(key) : null;
+  if (raw) {
+    var sub = JSON.parse(raw);
     if (sub.status === 'approved') {
       btn.innerHTML = '&#10003; Approved';
       btn.style.background = '#1a7a4a';
       btn.style.color = '#fff';
       btn.style.cursor = 'default';
+      btn.onclick = null;
     } else {
       btn.innerHTML = '&#128203; Review Timesheet';
       btn.style.background = '#f0a500';
       btn.style.color = '#1a1a1a';
       btn.style.cursor = 'pointer';
+      btn.onclick = function(){ openReviewModal(sub, key); };
     }
   } else {
     btn.innerHTML = '&#9993; Request Timesheet Report';
     btn.style.background = '#007b7f';
     btn.style.color = '#fff';
     btn.style.cursor = 'pointer';
+    btn.onclick = mainActionClick;
   }
 }
-
-// Make checkSubmissions globally accessible so supplier form can call it
 window.checkSubmissions = checkSubmissions;
 
 function mainActionClick() {
