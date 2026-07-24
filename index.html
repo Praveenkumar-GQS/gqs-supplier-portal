@@ -195,7 +195,7 @@ body{font-family:Arial,sans-serif;background:#e8e8e8;color:var(--text);font-size
   <tr><td class="lbl">Cost Centre:</td><td colspan="3"><input type="text" id="cost-centre" style="width:260px"></td></tr>
   <tr><td class="lbl">Vendor:</td><td><input type="text" id="vendor" placeholder="Vendor name" style="width:260px"></td><td class="lbl">Dates:</td><td style="display:flex;align-items:center;gap:6px;padding-top:6px;">From:<input type="date" id="date-from" style="width:130px"> To:<input type="date" id="date-to" style="width:130px"></td></tr>
   <tr><td class="lbl">Revisit:</td><td style="color:#666;">No revisit on record</td><td class="lbl">Location:</td><td><input type="text" id="location" placeholder="Site location" style="width:100%;max-width:400px"></td></tr>
-  <tr><td class="lbl">GQS Number:</td><td><input type="text" id="gqs-number" placeholder="e.g. GQS544-004/0019/0005" style="width:260px" oninput="updateRef(this.value)"></td><td class="lbl">CTR Number:</td><td><input type="text" id="ctr-number" placeholder="e.g. OSNOCTR046" style="width:200px"></td></tr>
+  <tr><td class="lbl">GQS Number:</td><td><input type="text" id="gqs-number" placeholder="e.g. GQS544-004/0019/0005" style="width:260px" value="GQS544-004/0019/0005" oninput="updateRef(this.value)"></td><td class="lbl">CTR Number:</td><td><input type="text" id="ctr-number" placeholder="e.g. OSNOCTR046" style="width:200px"></td></tr>
   <tr><td class="lbl">Report Received:</td><td><input type="date" id="rpt-received" style="width:160px"></td><td class="lbl">Report Sent:</td><td><input type="date" id="rpt-sent" style="width:160px"></td></tr>
   <tr><td class="lbl">Remote Inspection:</td><td colspan="3"><input type="checkbox" id="remote-insp"> <label for="remote-insp">Yes</label></td></tr>
 </table>
@@ -872,6 +872,8 @@ window.addEventListener('storage', function(e) {
 document.addEventListener('DOMContentLoaded', function(){
   var gqsEl = document.getElementById('gqs-number');
   if (gqsEl) gqsEl.addEventListener('input', checkSubmissions);
+  // Show default GQS ref in banner on load
+  updateRef(document.getElementById('gqs-number').value);
   checkSubmissions();
 });
 
