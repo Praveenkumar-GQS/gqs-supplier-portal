@@ -319,17 +319,19 @@ function submitReport(){
 
   // Collect all expense rows
   var rows = [];
-  document.querySelectorAll('#exp-body tr').forEach(function(tr, idx){
+  var rowIndex = 0;
+  document.querySelectorAll('#exp-body tr').forEach(function(tr){
     rows.push({
-      day:    tr.querySelector('.dc')  ? tr.querySelector('.dc').textContent  : '',
-      date:   tr.querySelector('.dtc') ? tr.querySelector('.dtc').textContent : '',
-      work:   getVal(tr,'work'),   travel: getVal(tr,'travel'),
-      report: getVal(tr,'report'), ot:     getVal(tr,'ot'),
-      mile:   getVal(tr,'mile'),   accom:  getVal(tr,'accom'),
-      flight: getVal(tr,'flight'), pd:     getVal(tr,'pd'),
-      desc:   getVal(tr,'desc'),   cost:   getVal(tr,'cost'),
-      isExtra: idx >= 7   // Mark rows beyond the default 7 as extra
+      day:     tr.querySelector('.dc')  ? tr.querySelector('.dc').textContent  : '',
+      date:    tr.querySelector('.dtc') ? tr.querySelector('.dtc').textContent : '',
+      work:    getVal(tr,'work'),   travel:  getVal(tr,'travel'),
+      report:  getVal(tr,'report'), ot:      getVal(tr,'ot'),
+      mile:    getVal(tr,'mile'),   accom:   getVal(tr,'accom'),
+      flight:  getVal(tr,'flight'), pd:      getVal(tr,'pd'),
+      desc:    getVal(tr,'desc'),   cost:    getVal(tr,'cost'),
+      isExtra: rowIndex >= 7        // Mark rows beyond the default 7 as extra
     });
+    rowIndex++;
   });
 
   // Collect documents
